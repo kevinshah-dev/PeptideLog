@@ -1,0 +1,51 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode user-specific state
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.moved-aside
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.pbxuser
+
+# Xcode build output
+DerivedData/
+build/
+Build/
+*.xcresult
+*.xcarchive
+*.dSYM
+*.dSYM.zip
+*.ipa
+
+# Swift Package Manager local build artifacts
+.build/
+.swiftpm/
+
+# CocoaPods / Carthage build artifacts, if added later
+Pods/
+Carthage/Build/
+
+# Local secrets and environment config
+.env
+.env.*
+!.env.example
+*.local
+*.secret
+*.secrets
+
+# Supabase local configuration
+Protocols/Config/Supabase.xcconfig
+!Protocols/Config/Supabase.example.xcconfig
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.swo
+
