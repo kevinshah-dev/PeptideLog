@@ -7,8 +7,12 @@ struct TitrationView: View {
 
     @State private var showingPlanSheet = false
 
+    private var supportedPlans: [TitrationPlan] {
+        plans.filter { PeptideLibrary.isSupportedPeptideName($0.peptideName) }
+    }
+
     private var activePlan: TitrationPlan? {
-        plans.first(where: \.isActive) ?? plans.first
+        supportedPlans.first(where: \.isActive) ?? supportedPlans.first
     }
 
     var body: some View {
@@ -231,9 +235,9 @@ private struct TitrationPlanSheet: View {
     @State private var notes = ""
 
     init() {
-        let defaultPeptide = UserDefaults.standard.string(forKey: "preferredPeptideName")
-            ?? PeptideLibrary.peptideNames.first
-            ?? "Semaglutide"
+        let defaultPeptide = PeptideLibrary.supportedPeptideName(
+            UserDefaults.standard.string(forKey: "preferredPeptideName")
+        )
         _peptideName = State(initialValue: defaultPeptide)
     }
 
@@ -241,7 +245,7 @@ private struct TitrationPlanSheet: View {
         NavigationStack {
             Form {
                 Section("Protocol") {
-                    Picker("Peptide", selection: $peptideName) {
+                    Picker("Medication", selection: $peptideName) {
                         ForEach(PeptideLibrary.orderedPeptideNames(preferredPeptideName: preferredPeptideName), id: \.self) { name in
                             Text(name).tag(name)
                         }

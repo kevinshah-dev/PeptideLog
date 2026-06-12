@@ -11,17 +11,24 @@ struct ProtocolsDashboardView: View {
     @Query(sort: \DoseReminder.nextDoseDate) private var reminders: [DoseReminder]
     @Query(sort: \SideEffectEntry.date, order: .reverse) private var effects: [SideEffectEntry]
     @Query(sort: \BodyMeasurementEntry.date) private var measurements: [BodyMeasurementEntry]
+    @Query(sort: \ProgressPhotoEntry.date, order: .reverse) private var photos: [ProgressPhotoEntry]
 
     @State private var showingNewProtocol = false
+    @State private var protocolPendingDeletion: PeptideProtocol?
+    @State private var showingDeleteConfirmation = false
 
     let openSettings: () -> Void
 
     private var activeProtocols: [PeptideProtocol] {
-        protocols.filter { $0.status != .completed }
+        protocols.filter {
+            PeptideLibrary.isSupportedPeptideName($0.peptideName) && $0.status != .completed
+        }
     }
 
     private var completedProtocols: [PeptideProtocol] {
-        protocols.filter { $0.status == .completed }
+        protocols.filter {
+            PeptideLibrary.isSupportedPeptideName($0.peptideName) && $0.status == .completed
+        }
     }
 
     var body: some View {
@@ -32,17 +39,15 @@ struct ProtocolsDashboardView: View {
 
                     SectionHeading(
                         title: "Active Protocols",
-                        actionTitle: "New",
+                        actionTitle: activeProtocols.isEmpty ? nil : "New",
                         systemImage: "plus.circle.fill",
                         action: { showingNewProtocol = true }
                     )
 
                     if activeProtocols.isEmpty {
-                        EmptyStateView(
-                            title: "No active protocols",
-                            subtitle: "Create a protocol to connect dosing, titration, effects, and progress around one peptide.",
-                            systemImage: "square.stack.3d.up"
-                        )
+                        CreateFirstProtocolCTA {
+                            showingNewProtocol = true
+                        }
                     } else {
                         LazyVStack(spacing: 12) {
                             ForEach(activeProtocols, id: \.id) { peptideProtocol in
@@ -73,6 +78,12 @@ struct ProtocolsDashboardView: View {
                                     } label: {
                                         Label("Clone", systemImage: "square.on.square")
                                     }
+
+                                    Button(role: .destructive) {
+                                        requestDelete(peptideProtocol)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
@@ -89,6 +100,13 @@ struct ProtocolsDashboardView: View {
                                     ProtocolCompactRow(peptideProtocol: peptideProtocol)
                                 }
                                 .buttonStyle(.plain)
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        requestDelete(peptideProtocol)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                             }
                         }
                     }
@@ -117,6 +135,23 @@ struct ProtocolsDashboardView: View {
             .sheet(isPresented: $showingNewProtocol) {
                 ProtocolEditorSheet()
             }
+            .confirmationDialog(
+                "Delete \(protocolPendingDeletion?.name ?? "Protocol")?",
+                isPresented: $showingDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete Protocol", role: .destructive) {
+                    if let protocolPendingDeletion {
+                        delete(protocolPendingDeletion)
+                    }
+                }
+
+                Button("Cancel", role: .cancel) {
+                    protocolPendingDeletion = nil
+                }
+            } message: {
+                Text("This removes the protocol and any logs, reminders, effects, measurements, and photos saved directly inside it.")
+            }
         }
     }
 
@@ -129,7 +164,7 @@ struct ProtocolsDashboardView: View {
                     Text("Dashboard")
                         .font(.title2.weight(.black))
 
-                    Text("Each peptide lives as one connected protocol with dosing, titration, effects, and progress.")
+                    Text("Each GLP protocol keeps dosing, titration, effects, and progress connected.")
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -147,6 +182,90 @@ struct ProtocolsDashboardView: View {
         case .completed:
             peptideProtocol.status = .active
         }
+    }
+
+    private func requestDelete(_ peptideProtocol: PeptideProtocol) {
+        protocolPendingDeletion = peptideProtocol
+        showingDeleteConfirmation = true
+    }
+
+    private func delete(_ peptideProtocol: PeptideProtocol) {
+        deleteProtocol(
+            peptideProtocol,
+            in: modelContext,
+            doseLogs: doseLogs,
+            reminders: reminders,
+            effects: effects,
+            measurements: measurements,
+            photos: photos
+        )
+        protocolPendingDeletion = nil
+    }
+}
+
+private struct CreateFirstProtocolCTA: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 18) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(AppTheme.accent.opacity(0.16))
+
+                    Image(systemName: "plus")
+                        .font(.system(size: 30, weight: .black))
+                        .foregroundStyle(AppTheme.accent)
+                }
+                .frame(width: 64, height: 64)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(AppTheme.accent.opacity(0.55))
+                }
+
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("Create your first protocol")
+                        .font(.title2.weight(.black))
+                        .foregroundStyle(AppTheme.textPrimary)
+                }
+
+                HStack(spacing: 9) {
+                    Text("Start Protocol")
+                        .font(.headline.weight(.bold))
+
+                    Image(systemName: "arrow.right")
+                        .font(.headline.weight(.black))
+                }
+                .foregroundStyle(.black)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 13)
+                .background(AppTheme.accent, in: Capsule())
+            }
+            .padding(22)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                ZStack {
+                    AppTheme.elevated
+
+                    LinearGradient(
+                        colors: [
+                            AppTheme.accent.opacity(0.22),
+                            AppTheme.elevated.opacity(0.05),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(AppTheme.accent.opacity(0.42), lineWidth: 1.2)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Create your first protocol")
+        .accessibilityHint("Opens the new protocol form")
     }
 }
 
@@ -297,6 +416,7 @@ private struct ProtocolCompactRow: View {
 }
 
 private struct ProtocolDetailView: View {
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Bindable var peptideProtocol: PeptideProtocol
 
@@ -311,6 +431,7 @@ private struct ProtocolDetailView: View {
     @State private var showingEffectSheet = false
     @State private var showingMeasurementSheet = false
     @State private var showingPhotoSheet = false
+    @State private var showingDeleteConfirmation = false
 
     private var protocolDoseLogs: [DoseLogEntry] {
         doseLogs.filter { $0.belongs(to: peptideProtocol) }
@@ -326,6 +447,39 @@ private struct ProtocolDetailView: View {
 
     private var protocolMeasurements: [BodyMeasurementEntry] {
         measurements.filter { $0.belongs(to: peptideProtocol) }
+    }
+
+    private var protocolMeasurementsChronological: [BodyMeasurementEntry] {
+        protocolMeasurements.sorted { $0.date < $1.date }
+    }
+
+    private var protocolWeightDomain: ClosedRange<Double> {
+        let weights = protocolMeasurementsChronological.map(\.weight)
+        guard let minimum = weights.min(),
+              let maximum = weights.max() else {
+            return 0...1
+        }
+
+        let spread = maximum - minimum
+        let padding = max(spread * 0.35, 1.5)
+        let lowerBound = max(0, floor((minimum - padding) * 2) / 2)
+        let upperBound = ceil((maximum + padding) * 2) / 2
+
+        guard lowerBound < upperBound else {
+            return max(0, lowerBound - 2)...(upperBound + 2)
+        }
+
+        return lowerBound...upperBound
+    }
+
+    private var protocolWeightChange: Double? {
+        guard protocolMeasurementsChronological.count >= 2,
+              let first = protocolMeasurementsChronological.first,
+              let latest = protocolMeasurementsChronological.last else {
+            return nil
+        }
+
+        return latest.weight - first.weight
     }
 
     private var protocolPhotos: [ProgressPhotoEntry] {
@@ -374,6 +528,12 @@ private struct ProtocolDetailView: View {
                         Label("Mark Completed", systemImage: "checkmark.seal")
                     }
                     .disabled(peptideProtocol.status == .completed)
+
+                    Button(role: .destructive) {
+                        showingDeleteConfirmation = true
+                    } label: {
+                        Label("Delete Protocol", systemImage: "trash")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -393,6 +553,19 @@ private struct ProtocolDetailView: View {
         }
         .sheet(isPresented: $showingPhotoSheet) {
             ProtocolPhotoSheet(peptideProtocol: peptideProtocol)
+        }
+        .confirmationDialog(
+            "Delete \(peptideProtocol.name)?",
+            isPresented: $showingDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Protocol", role: .destructive) {
+                deleteCurrentProtocol()
+            }
+
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes the protocol and any logs, reminders, effects, measurements, and photos saved directly inside it.")
         }
     }
 
@@ -543,7 +716,7 @@ private struct ProtocolDetailView: View {
             if protocolEffects.isEmpty {
                 EmptyStateView(
                     title: "No effects tracked",
-                    subtitle: "Symptom and side-effect entries stay tied to this peptide protocol.",
+                    subtitle: "Symptom and side-effect entries stay tied to this GLP protocol.",
                     systemImage: "waveform.path.ecg"
                 )
             } else {
@@ -581,8 +754,26 @@ private struct ProtocolDetailView: View {
                     .foregroundStyle(AppTheme.accent)
                 }
 
-                if protocolMeasurements.count >= 2 {
-                    Chart(protocolMeasurements, id: \.id) { entry in
+                if protocolMeasurementsChronological.count >= 2 {
+                    weightSummaryStrip
+
+                    Chart(protocolMeasurementsChronological, id: \.id) { entry in
+                        AreaMark(
+                            x: .value("Date", entry.date),
+                            yStart: .value("Floor", protocolWeightDomain.lowerBound),
+                            yEnd: .value("Weight", entry.weight)
+                        )
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [
+                                    AppTheme.accent.opacity(0.22),
+                                    AppTheme.accent.opacity(0.02),
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+
                         LineMark(
                             x: .value("Date", entry.date),
                             y: .value("Weight", entry.weight)
@@ -595,6 +786,23 @@ private struct ProtocolDetailView: View {
                             y: .value("Weight", entry.weight)
                         )
                         .foregroundStyle(AppTheme.accent)
+                    }
+                    .chartYScale(domain: protocolWeightDomain)
+                    .chartXAxis {
+                        AxisMarks(values: .automatic(desiredCount: 4)) {
+                            AxisGridLine()
+                                .foregroundStyle(AppTheme.divider.opacity(0.8))
+                            AxisValueLabel()
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks(position: .trailing, values: .automatic(desiredCount: 4)) {
+                            AxisGridLine()
+                                .foregroundStyle(AppTheme.divider.opacity(0.8))
+                            AxisValueLabel()
+                                .foregroundStyle(AppTheme.textSecondary)
+                        }
                     }
                     .frame(height: 200)
                 } else {
@@ -612,6 +820,38 @@ private struct ProtocolDetailView: View {
                 }
             }
         }
+    }
+
+    private var weightSummaryStrip: some View {
+        HStack(spacing: 10) {
+            ProtocolProgressStat(
+                title: "Current",
+                value: protocolMeasurementsChronological.last.map { "\($0.weight.peptideFormatted) lb" } ?? "None",
+                tint: AppTheme.accent
+            )
+
+            ProtocolProgressStat(
+                title: "Change",
+                value: protocolWeightChangeCopy,
+                tint: protocolWeightChangeTint
+            )
+        }
+    }
+
+    private var protocolWeightChangeCopy: String {
+        guard let protocolWeightChange else { return "None" }
+
+        if abs(protocolWeightChange) < 0.05 {
+            return "Stable"
+        }
+
+        let direction = protocolWeightChange < 0 ? "Down" : "Up"
+        return "\(direction) \(abs(protocolWeightChange).peptideFormatted) lb"
+    }
+
+    private var protocolWeightChangeTint: Color {
+        guard let protocolWeightChange else { return AppTheme.textSecondary }
+        return protocolWeightChange <= 0 ? AppTheme.accent : AppTheme.warning
     }
 
     private var photosPanel: some View {
@@ -656,6 +896,19 @@ private struct ProtocolDetailView: View {
         case .completed:
             break
         }
+    }
+
+    private func deleteCurrentProtocol() {
+        deleteProtocol(
+            peptideProtocol,
+            in: modelContext,
+            doseLogs: doseLogs,
+            reminders: reminders,
+            effects: effects,
+            measurements: measurements,
+            photos: photos
+        )
+        dismiss()
     }
 }
 
@@ -704,6 +957,31 @@ private struct ProtocolMiniMetric: View {
                 .lineLimit(1)
         }
         .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.elevatedStrong)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private struct ProtocolProgressStat: View {
+    let title: String
+    let value: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(AppTheme.textSecondary)
+
+            Text(value)
+                .font(.headline.weight(.black))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppTheme.elevatedStrong)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -973,9 +1251,9 @@ private struct ProtocolEditorSheet: View {
     @State private var notes = ""
 
     init() {
-        let defaultPeptide = UserDefaults.standard.string(forKey: "preferredPeptideName")
-            ?? PeptideLibrary.peptideNames.first
-            ?? "Semaglutide"
+        let defaultPeptide = PeptideLibrary.supportedPeptideName(
+            UserDefaults.standard.string(forKey: "preferredPeptideName")
+        )
         _peptideName = State(initialValue: defaultPeptide)
         _name = State(initialValue: "\(defaultPeptide) Protocol")
     }
@@ -986,7 +1264,7 @@ private struct ProtocolEditorSheet: View {
                 Section("Protocol") {
                     TextField("Protocol name", text: $name)
 
-                    Picker("Peptide", selection: $peptideName) {
+                    Picker("Medication", selection: $peptideName) {
                         ForEach(PeptideLibrary.orderedPeptideNames(preferredPeptideName: preferredPeptideName), id: \.self) { peptide in
                             Text(peptide).tag(peptide)
                         }
@@ -1500,6 +1778,40 @@ private extension DoseLogEntry {
         protocolIDString == peptideProtocol.id.uuidString
             || (protocolIDString == nil && peptideName == peptideProtocol.peptideName)
     }
+}
+
+private func deleteProtocol(
+    _ peptideProtocol: PeptideProtocol,
+    in modelContext: ModelContext,
+    doseLogs: [DoseLogEntry],
+    reminders: [DoseReminder],
+    effects: [SideEffectEntry],
+    measurements: [BodyMeasurementEntry],
+    photos: [ProgressPhotoEntry]
+) {
+    let protocolID = peptideProtocol.id.uuidString
+
+    doseLogs
+        .filter { $0.protocolIDString == protocolID }
+        .forEach { modelContext.delete($0) }
+
+    reminders
+        .filter { $0.protocolIDString == protocolID }
+        .forEach { modelContext.delete($0) }
+
+    effects
+        .filter { $0.protocolIDString == protocolID }
+        .forEach { modelContext.delete($0) }
+
+    measurements
+        .filter { $0.protocolIDString == protocolID }
+        .forEach { modelContext.delete($0) }
+
+    photos
+        .filter { $0.protocolIDString == protocolID }
+        .forEach { modelContext.delete($0) }
+
+    modelContext.delete(peptideProtocol)
 }
 
 private extension DoseReminder {

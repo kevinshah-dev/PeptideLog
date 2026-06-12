@@ -11,8 +11,16 @@ struct DoseLogView: View {
 
     let openSettings: () -> Void
 
+    private var supportedDoseLogs: [DoseLogEntry] {
+        doseLogs.filter { PeptideLibrary.isSupportedPeptideName($0.peptideName) }
+    }
+
+    private var supportedReminders: [DoseReminder] {
+        reminders.filter { PeptideLibrary.isSupportedPeptideName($0.peptideName) }
+    }
+
     private var upcomingReminder: DoseReminder? {
-        reminders
+        supportedReminders
             .filter(\.isEnabled)
             .sorted { $0.nextDoseDate < $1.nextDoseDate }
             .first
@@ -51,11 +59,11 @@ struct DoseLogView: View {
                         )
                     }
 
-                    if !reminders.isEmpty {
+                    if !supportedReminders.isEmpty {
                         SectionHeading(title: "Scheduled Reminders")
 
                         LazyVStack(spacing: 10) {
-                            ForEach(reminders, id: \.id) { reminder in
+                            ForEach(supportedReminders, id: \.id) { reminder in
                                 ReminderScheduleRow(reminder: reminder) {
                                     refreshSchedule(for: reminder)
                                 }
@@ -77,7 +85,7 @@ struct DoseLogView: View {
                         action: { showingDoseSheet = true }
                     )
 
-                    if doseLogs.isEmpty {
+                    if supportedDoseLogs.isEmpty {
                         EmptyStateView(
                             title: "No doses logged",
                             subtitle: "Your injection history will build a dated local record.",
@@ -85,7 +93,7 @@ struct DoseLogView: View {
                         )
                     } else {
                         LazyVStack(spacing: 10) {
-                            ForEach(Array(doseLogs.prefix(12)), id: \.id) { log in
+                            ForEach(Array(supportedDoseLogs.prefix(12)), id: \.id) { log in
                                 DoseRow(log: log)
                                     .contextMenu {
                                         Button(role: .destructive) {
@@ -154,8 +162,8 @@ struct DoseLogView: View {
     }
 
     private var summaryGrid: some View {
-        let lastDose = doseLogs.first
-        let weeklyCount = doseLogs.filter {
+        let lastDose = supportedDoseLogs.first
+        let weeklyCount = supportedDoseLogs.filter {
             $0.date >= Calendar.current.date(byAdding: .day, value: -7, to: .now) ?? .now
         }.count
 
@@ -366,9 +374,9 @@ private struct DoseEntrySheet: View {
     @State private var notes = ""
 
     init() {
-        let defaultPeptide = UserDefaults.standard.string(forKey: "preferredPeptideName")
-            ?? PeptideLibrary.peptideNames.first
-            ?? "Semaglutide"
+        let defaultPeptide = PeptideLibrary.supportedPeptideName(
+            UserDefaults.standard.string(forKey: "preferredPeptideName")
+        )
         _peptideName = State(initialValue: defaultPeptide)
     }
 
@@ -376,7 +384,7 @@ private struct DoseEntrySheet: View {
         NavigationStack {
             Form {
                 Section("Dose") {
-                    Picker("Peptide", selection: $peptideName) {
+                    Picker("Medication", selection: $peptideName) {
                         ForEach(PeptideLibrary.orderedPeptideNames(preferredPeptideName: preferredPeptideName), id: \.self) { name in
                             Text(name).tag(name)
                         }
@@ -456,9 +464,9 @@ private struct ReminderEntrySheet: View {
     @State private var repeatIntervalDays = 7
 
     init() {
-        let defaultPeptide = UserDefaults.standard.string(forKey: "preferredPeptideName")
-            ?? PeptideLibrary.peptideNames.first
-            ?? "Semaglutide"
+        let defaultPeptide = PeptideLibrary.supportedPeptideName(
+            UserDefaults.standard.string(forKey: "preferredPeptideName")
+        )
         _peptideName = State(initialValue: defaultPeptide)
     }
 
@@ -466,7 +474,7 @@ private struct ReminderEntrySheet: View {
         NavigationStack {
             Form {
                 Section("Reminder") {
-                    Picker("Peptide", selection: $peptideName) {
+                    Picker("Medication", selection: $peptideName) {
                         ForEach(PeptideLibrary.orderedPeptideNames(preferredPeptideName: preferredPeptideName), id: \.self) { name in
                             Text(name).tag(name)
                         }

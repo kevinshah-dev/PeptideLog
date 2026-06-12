@@ -59,7 +59,7 @@ private struct WelcomeAuthView: View {
                             .font(.system(size: 44, weight: .black, design: .default))
                             .foregroundStyle(AppTheme.textPrimary)
 
-                        Text("Your GLP-1 and peptide companion for doses, titration, progress, and tolerability.")
+                        Text("Your GLP and metabolic protocol companion for doses, titration, progress, and tolerability.")
                             .font(.title3.weight(.medium))
                             .foregroundStyle(AppTheme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)

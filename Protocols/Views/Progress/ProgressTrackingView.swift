@@ -41,6 +41,25 @@ struct ProgressTrackingView: View {
         measurements.sorted { $0.date < $1.date }.last
     }
 
+    private var filteredWeightDomain: ClosedRange<Double> {
+        let weights = filteredMeasurements.map(\.weight)
+        guard let minimum = weights.min(),
+              let maximum = weights.max() else {
+            return 0...1
+        }
+
+        let spread = maximum - minimum
+        let padding = max(spread * 0.35, 1.5)
+        let lowerBound = max(0, floor((minimum - padding) * 2) / 2)
+        let upperBound = ceil((maximum + padding) * 2) / 2
+
+        guard lowerBound < upperBound else {
+            return max(0, lowerBound - 2)...(upperBound + 2)
+        }
+
+        return lowerBound...upperBound
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -157,6 +176,22 @@ struct ProgressTrackingView: View {
                     .padding(.vertical, 8)
                 } else {
                     Chart(filteredMeasurements, id: \.id) { entry in
+                        AreaMark(
+                            x: .value("Date", entry.date),
+                            yStart: .value("Floor", filteredWeightDomain.lowerBound),
+                            yEnd: .value("Weight", entry.weight)
+                        )
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [
+                                    AppTheme.accent.opacity(0.22),
+                                    AppTheme.accent.opacity(0.02),
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+
                         LineMark(
                             x: .value("Date", entry.date),
                             y: .value("Weight", entry.weight)
@@ -170,6 +205,7 @@ struct ProgressTrackingView: View {
                         )
                         .foregroundStyle(AppTheme.accent)
                     }
+                    .chartYScale(domain: filteredWeightDomain)
                     .chartXAxis {
                         AxisMarks(values: .automatic(desiredCount: 4))
                     }

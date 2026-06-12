@@ -7,9 +7,9 @@ struct OnboardingView: View {
     @State private var selectedPeptideName: String
 
     init() {
-        let defaultPeptide = UserDefaults.standard.string(forKey: "preferredPeptideName")
-            ?? PeptideLibrary.peptideNames.first
-            ?? "Semaglutide"
+        let defaultPeptide = PeptideLibrary.supportedPeptideName(
+            UserDefaults.standard.string(forKey: "preferredPeptideName")
+        )
         _selectedPeptideName = State(initialValue: defaultPeptide)
     }
 
@@ -48,7 +48,7 @@ struct OnboardingView: View {
                     Text("Welcome to Protocols")
                         .font(.largeTitle.weight(.black))
 
-                    Text("A polished companion for keeping your peptide protocol organized.")
+                    Text("A polished companion for keeping your GLP protocol organized.")
                         .font(.title3.weight(.medium))
                         .foregroundStyle(AppTheme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -104,7 +104,7 @@ struct OnboardingView: View {
                     Text("Quick Setup")
                         .font(.largeTitle.weight(.black))
 
-                    Text("Choose the peptide you are currently using so Protocols can surface it first.")
+                    Text("Choose the medication or GLP protocol you are currently using so Protocols can surface it first.")
                         .font(.title3.weight(.medium))
                         .foregroundStyle(AppTheme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -112,10 +112,10 @@ struct OnboardingView: View {
 
                 AppPanel {
                     VStack(alignment: .leading, spacing: 14) {
-                        Text("Current Peptide")
+                        Text("Current Protocol")
                             .font(.headline.weight(.semibold))
 
-                        Picker("Current peptide", selection: $selectedPeptideName) {
+                        Picker("Current protocol", selection: $selectedPeptideName) {
                             ForEach(PeptideLibrary.peptideNames, id: \.self) { peptideName in
                                 Text(peptideName).tag(peptideName)
                             }

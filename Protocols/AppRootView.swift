@@ -53,6 +53,10 @@ private struct MainTabView: View {
                     Label("Library", systemImage: "books.vertical")
                 }
 
+            BodyPreviewView()
+                .tabItem {
+                    Label("Preview", systemImage: "person.crop.rectangle")
+                }
         }
         .toolbarBackground(AppTheme.elevated, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)

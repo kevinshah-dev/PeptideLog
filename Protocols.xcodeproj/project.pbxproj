@@ -27,6 +27,8 @@
 		100000000000000000000012 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000113 /* OnboardingView.swift */; };
 		100000000000000000000013 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 100000000000000000000132 /* Supabase */; };
 		100000000000000000000014 /* ProtocolsDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000115 /* ProtocolsDashboardView.swift */; };
+		100000000000000000000015 /* BodyPreviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000116 /* BodyPreviewService.swift */; };
+		100000000000000000000016 /* BodyPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000117 /* BodyPreviewView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +54,8 @@
 		100000000000000000000113 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		100000000000000000000114 /* Supabase.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Supabase.xcconfig; sourceTree = "<group>"; };
 		100000000000000000000115 /* ProtocolsDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolsDashboardView.swift; sourceTree = "<group>"; };
+		100000000000000000000116 /* BodyPreviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyPreviewService.swift; sourceTree = "<group>"; };
+		100000000000000000000117 /* BodyPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyPreviewView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -147,6 +151,7 @@
 				100000000000000000000108 /* NotificationScheduler.swift */,
 				100000000000000000000110 /* SupabaseClientProvider.swift */,
 				100000000000000000000111 /* AuthManager.swift */,
+				100000000000000000000116 /* BodyPreviewService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -161,8 +166,17 @@
 				100000000000000000000073 /* Library */,
 				100000000000000000000074 /* Effects */,
 				100000000000000000000075 /* Progress */,
+				100000000000000000000078 /* Preview */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		100000000000000000000078 /* Preview */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000117 /* BodyPreviewView.swift */,
+			);
+			path = Preview;
 			sourceTree = "<group>";
 		};
 		100000000000000000000077 /* Protocols */ = {
@@ -315,6 +329,8 @@
 				100000000000000000000011 /* AuthViews.swift in Sources */,
 				100000000000000000000012 /* OnboardingView.swift in Sources */,
 				100000000000000000000014 /* ProtocolsDashboardView.swift in Sources */,
+				100000000000000000000015 /* BodyPreviewService.swift in Sources */,
+				100000000000000000000016 /* BodyPreviewView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
